@@ -1,61 +1,152 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { PubSubService } from '../redis/pubsub.service';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { JwtPayload } from 'src/shared/interfaces/jwt-payload.interface';
+import { Repository } from 'typeorm';
+import { CacheService } from '../redis/cache.service';
+import { UserActivity } from '../shared/entities/user-activity.entity';
 import { CreateActivityDto } from './dto/create-activity.dto';
 import { UpdateActivityDto } from './dto/update-activity.dto';
+import { Activity } from './entities/activity.entity';
+import { buildActivity } from './utils/build-activity.util';
+import { invalidateActivityCache } from './utils/cache.utils';
+import { findOrCreateUser } from './utils/find-or-create-user.util';
+import { validateOwnership } from './utils/validate-ownership.util';
 
 @Injectable()
-export class ActivityService implements OnModuleInit {
+export class ActivityService {
   private readonly logger = new Logger(ActivityService.name);
 
-  constructor(private readonly pubSubService: PubSubService) {}
+  constructor(
+    @InjectRepository(Activity)
+    private readonly activityRepo: Repository<Activity>,
 
-  async onModuleInit() {
-    this.logger.log(' ActivityService iniciado e ouvindo eventos Redis...');
-  }
+    @InjectRepository(UserActivity)
+    private readonly userRepo: Repository<UserActivity>,
 
-  // Criação de atividades acadêmicas
-  create(createActivityDto: CreateActivityDto) {
-    this.logger.log(`📝 Criando nova atividade: ${createActivityDto.title}`);
-    return {
-      message: 'Atividade criada com sucesso!',
-      data: createActivityDto,
-    };
-  }
+    private readonly cacheService: CacheService,
+  ) {}
 
-  findAll() {
-    this.logger.log('Buscando todas as atividades acadêmicas...');
-    return `This action returns all activities`;
-  }
-
-  findOne(id: number) {
-    this.logger.log(`Buscando atividade com id=${id}`);
-    return `This action returns a #${id} activity`;
-  }
-
-  update(id: number, updateActivityDto: UpdateActivityDto) {
-    this.logger.log(`Atualizando atividade id=${id}`);
-    return {
-      message: 'Atividade atualizada com sucesso!',
-      data: updateActivityDto,
-    };
-  }
-
-  remove(id: number) {
-    this.logger.warn(`Removendo atividade id=${id}`);
-    return `This action removes a #${id} activity`;
-  }
-
-  /**
-   * Apenas reage a eventos Redis — sem criar usuário!
-   * Pode ser usada futuramente para associar atividades automáticas.
-   */
-  handleUserCreatedEvent(data: any) {
+  //CRIA UMA NOVA ATIVIDADE
+  async create(
+    dto: CreateActivityDto,
+    image: Express.Multer.File | undefined,
+    userJwt: JwtPayload,
+  ): Promise<Activity> {
     this.logger.log(
-      `📢 Evento Redis Usuário criado detectado: ${data.email} (id=${data.id})`,
+      `Criando atividade "${dto.title}" para usuário ID: ${userJwt.sub}`,
     );
 
-    // Exemplo futuro:
-    // Criar automaticamente uma "Atividade de boas-vindas" associada ao novo usuário
-    // ou simplesmente registrar em log de auditoria.
+    const user = await findOrCreateUser(this.userRepo, userJwt, this.logger);
+
+    const activity = buildActivity(dto, image, user, this.logger);
+
+    const savedActivity = await this.activityRepo.save(activity);
+
+    this.logger.log(
+      `Atividade criada com ID ${savedActivity.id} para usuário ${user.email}`,
+    );
+
+    await invalidateActivityCache(
+      this.cacheService,
+      user.id,
+      undefined,
+      this.logger,
+    );
+
+    return savedActivity;
+  }
+
+  //LISTAR TODAS AS ATIVIDADES DE UM USUÁRIO
+  async findAll(userId: number): Promise<Activity[]> {
+    this.logger.log(`Listando atividades do usuário ID: ${userId}`);
+
+    const cacheKey = `activities:user:${userId}`;
+    const cached = await this.cacheService.get<Activity[]>(cacheKey);
+
+    if (cached) {
+      this.logger.debug(`Retornando ${cached.length} atividades do cache`);
+      return cached;
+    }
+
+    const activities = await this.activityRepo.find({
+      where: { user: { id: userId } },
+      order: { createdAt: 'DESC' },
+    });
+
+    this.logger.log(`Encontradas ${activities.length} atividades encontradas`);
+
+    await this.cacheService.set(cacheKey, activities, 60);
+    return activities;
+  }
+
+  //LISTAR UMA ATIVIDADE PELO ID
+  async findOne(id: number, userId: number): Promise<Activity> {
+    this.logger.log(`Buscando atividade ID: ${id}`);
+
+    const cacheKey = `activity:${id}`;
+    const cached = await this.cacheService.get<Activity>(cacheKey);
+
+    if (cached) {
+      validateOwnership(cached, userId, this.logger);
+      return cached;
+    }
+
+    const activity = await this.activityRepo.findOne({
+      where: { id },
+      relations: ['user'],
+    });
+
+    if (!activity) {
+      this.logger.warn(`Atividade ID ${id} não encontrada`);
+      throw new NotFoundException(`Atividade com ID ${id} não encontrada`);
+    }
+
+    validateOwnership(activity, userId, this.logger);
+
+    await this.cacheService.set(cacheKey, activity, 60);
+    return activity;
+  }
+
+  //ATUALIZAR UMA ATIVIDADE
+  async update(
+    id: number,
+    dto: UpdateActivityDto,
+    image: Express.Multer.File | undefined,
+    userId: number,
+  ): Promise<Activity> {
+    this.logger.log(`Atualizando atividade ID: ${id}`);
+
+    const activity = await this.findOne(id, userId);
+
+    // Atualiza campos
+    Object.assign(activity, dto);
+
+    if (image) {
+      this.logger.debug(`Nova imagem enviada: ${image.filename}`);
+      activity.imagePath = image.filename;
+    }
+
+    const updated = await this.activityRepo.save(activity);
+
+    this.logger.log(`Atividade ID ${id} atualizada com sucesso`);
+
+    // Invalida cache
+    await invalidateActivityCache(this.cacheService, userId, id, this.logger);
+
+    return updated;
+  }
+
+  //DELETAR UMA ATIVIDADE
+  async remove(id: number, userId: number): Promise<void> {
+    this.logger.log(`Removendo atividade ID: ${id}`);
+
+    const activity = await this.findOne(id, userId);
+
+    await this.activityRepo.remove(activity);
+
+    this.logger.log(`Atividade ID ${id} removida com sucesso`);
+
+    // Invalida cache
+    await invalidateActivityCache(this.cacheService, userId, id);
   }
 }

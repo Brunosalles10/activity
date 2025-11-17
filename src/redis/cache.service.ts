@@ -7,68 +7,54 @@ export class CacheService {
 
   constructor(@Inject('REDIS_CLIENT') private readonly redisClient: Redis) {}
 
-  /**
-   * Retorna um valor do cache
-   * @param key Chave única do cache
-   */
+  //Obtém um valor do cache pelo chave
   async get<T>(key: string): Promise<T | null> {
     try {
       const value = await this.redisClient.get(key);
       if (!value) return null;
 
-      this.logger.log(`Cache HIT → ${key}`);
+      this.logger.debug(`Cache HIT → ${key}`);
       return JSON.parse(value) as T;
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : 'Erro desconhecido';
-      this.logger.error(`Erro ao ler cache (${key}): ${errorMessage}`);
+      this.handleError('ler cache', key, err);
       return null;
     }
   }
 
-  /**
-   * Armazena um valor no cache com tempo de expiração
-   * @param key Chave do cache
-   * @param value Valor a ser armazenado
-   * @param ttl Tempo de expiração em segundos
-   */
+  //Grava um valor no cache com uma chave e tempo de expiração (TTL)
   async set<T>(key: string, value: T, ttl = 60): Promise<void> {
     try {
       await this.redisClient.set(key, JSON.stringify(value), 'EX', ttl);
       this.logger.log(`Cache SET → ${key} (TTL: ${ttl}s)`);
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : 'Erro desconhecido';
-      this.logger.error(`Erro ao gravar cache (${key}): ${errorMessage}`);
+      this.handleError('gravar cache', key, err);
     }
   }
 
-  /**
-   * Remove um valor do cache
-   * @param key Chave do cache
-   */
+  //Deleta um valor do cache pela chave
   async del(key: string): Promise<void> {
     try {
       await this.redisClient.del(key);
       this.logger.log(`Cache DEL → ${key}`);
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : 'Erro desconhecido';
-      this.logger.error(`Erro ao deletar cache (${key}): ${errorMessage}`);
+      this.handleError('deletar cache', key, err);
     }
   }
 
-  /**
-   * Limpa todo o cache
-   */
+  // Limpa todo o cache do Redis
   async flushAll(): Promise<void> {
     try {
       await this.redisClient.flushall();
       this.logger.warn(' Todos os caches foram limpos!');
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : 'Erro desconhecido';
-      this.logger.error('Erro ao limpar todo o cache:', errorMessage);
+      this.handleError('limpar todo o cache', 'all', err);
     }
+  }
+
+  // Função auxiliar para lidar com erros
+  private handleError(operation: string, key: string, error: unknown): void {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Erro desconhecido';
+    this.logger.error(`Erro ao ${operation} (${key}): ${errorMessage}`);
   }
 }
