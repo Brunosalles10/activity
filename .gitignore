@@ -10,6 +10,7 @@ tsconfig.build.json
 tsconfig.json
 nest-cli.json
 
+
 # Uploads - IGNORA IMAGENS, mas mantém a pasta
 uploads/**/*
 !uploads/.gitkeep
