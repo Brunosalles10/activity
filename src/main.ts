@@ -47,7 +47,7 @@ async function bootstrap() {
   logger.log(`Aplicação Activity rodando na porta: http://localhost:${port}`);
   logger.log(`Swagger disponível em: http://localhost:${port}/api`);
   logger.log(
-    `Servidor de  arquivos estáticos em: http://localhost:${port}/uploads/`,
+    `Servidor de  arquivos estáticos: http://localhost:${port}/uploads/`,
   );
 }
 bootstrap();

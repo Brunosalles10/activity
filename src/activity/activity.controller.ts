@@ -18,7 +18,7 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth } from '@nestjs/swagger';
-import { RequestUser } from 'src/shared/interfaces/request-user.interface';
+import { JwtPayload } from 'src/shared/interfaces/jwt-payload.interface';
 import { ActivityService } from './activity.service';
 import { CreateActivityDto } from './dto/create-activity.dto';
 import { UpdateActivityDto } from './dto/update-activity.dto';
@@ -37,7 +37,7 @@ export class ActivityController {
   create(
     @Body() dto: CreateActivityDto,
     @UploadedFile() image: Express.Multer.File | undefined,
-    @Request() req: { user: RequestUser },
+    @Request() req: { user: JwtPayload },
   ) {
     const { title } = dto;
     const { email, sub } = req.user;
@@ -50,7 +50,7 @@ export class ActivityController {
   }
 
   @Get()
-  findAll(@Request() req: { user: RequestUser }) {
+  findAll(@Request() req: { user: JwtPayload }) {
     const { sub } = req.user;
     this.logger.log(`Listando atividades do usuário ID: ${sub}`);
     return this.activityService.findAll(sub);
@@ -59,7 +59,7 @@ export class ActivityController {
   @Get(':id')
   findOne(
     @Param('id', ParseIntPipe) id: number,
-    @Request() req: { user: RequestUser },
+    @Request() req: { user: JwtPayload },
   ) {
     const { sub } = req.user;
     this.logger.log(`Buscando atividade ID=${id} para userID=${sub}`);
@@ -73,7 +73,7 @@ export class ActivityController {
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateActivityDto,
     @UploadedFile() image: Express.Multer.File | undefined,
-    @Request() req: { user: RequestUser },
+    @Request() req: { user: JwtPayload },
   ) {
     const { sub } = req.user;
 
@@ -90,7 +90,7 @@ export class ActivityController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(
     @Param('id', ParseIntPipe) id: number,
-    @Request() req: { user: RequestUser },
+    @Request() req: { user: JwtPayload },
   ): Promise<void> {
     const { sub } = req.user;
 
