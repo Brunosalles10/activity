@@ -31,7 +31,7 @@ export class ActivityPubSubService implements OnModuleInit {
     try {
       const payload = JSON.stringify(message);
       await this.publisher.publish(channel, payload);
-      this.logger.log(`Evento publicado → [${channel}] ${payload}`);
+      this.logger.debug(`Evento publicado → [${channel}] ${payload}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       this.logger.error(`Erro ao publicar no canal ${channel}: ${msg}`);
@@ -45,7 +45,8 @@ export class ActivityPubSubService implements OnModuleInit {
       const handlers: Record<string, () => void> = {
         'user.created': () =>
           this.logger.log(`Novo usuário criado: ${data.email} (id=${data.id})`),
-        'user.updated': () => this.logger.log(`Usuário atualizado: ${data.id}`),
+        'user.updated': () =>
+          this.logger.debug(`Usuário atualizado: ${data.id}`),
         'user.deleted': () => this.logger.warn(`Usuário removido: ${data.id}`),
       };
 

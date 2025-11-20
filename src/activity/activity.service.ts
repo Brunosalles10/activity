@@ -58,8 +58,6 @@ export class ActivityService {
 
   //LISTAR TODAS AS ATIVIDADES DE UM USUÁRIO
   async findAll(userId: number): Promise<Activity[]> {
-    this.logger.log(`Listando atividades do usuário ID: ${userId}`);
-
     const cacheKey = `activities:user:${userId}`;
     const cached = await this.cacheService.get<Activity[]>(cacheKey);
 
@@ -81,8 +79,6 @@ export class ActivityService {
 
   //LISTAR UMA ATIVIDADE PELO ID
   async findOne(id: number, userId: number): Promise<Activity> {
-    this.logger.log(`Buscando atividade ID: ${id}`);
-
     const cacheKey = `activity:${id}`;
     const cached = await this.cacheService.get<Activity>(cacheKey);
 
@@ -114,8 +110,6 @@ export class ActivityService {
     image: Express.Multer.File | undefined,
     userId: number,
   ): Promise<Activity> {
-    this.logger.log(`Atualizando atividade ID: ${id}`);
-
     const activity = await this.findOne(id, userId);
 
     // Atualiza campos
@@ -138,13 +132,9 @@ export class ActivityService {
 
   //DELETAR UMA ATIVIDADE
   async remove(id: number, userId: number): Promise<void> {
-    this.logger.log(`Removendo atividade ID: ${id}`);
-
     const activity = await this.findOne(id, userId);
 
     await this.activityRepo.remove(activity);
-
-    this.logger.log(`Atividade ID ${id} removida com sucesso`);
 
     // Invalida cache
     await invalidateActivityCache(this.cacheService, userId, id);

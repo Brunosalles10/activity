@@ -41,12 +41,13 @@ async function bootstrap() {
   );
 
   const port = process.env.PORT ?? 3000;
+  app.enableCors();
   await app.listen(port);
 
   logger.log(`Aplicação Activity rodando na porta: http://localhost:${port}`);
   logger.log(`Swagger disponível em: http://localhost:${port}/api`);
   logger.log(
-    `Servindo arquivos estáticos em: http://localhost:${port}/uploads/`,
+    `Servidor de  arquivos estáticos em: http://localhost:${port}/uploads/`,
   );
 }
 bootstrap();
