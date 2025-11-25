@@ -2,6 +2,7 @@ import {
   IsDateString,
   IsIn,
   IsNotEmpty,
+  IsOptional,
   IsString,
   IsUrl,
 } from 'class-validator';
@@ -29,7 +30,7 @@ export class CreateActivityDto {
   })
   status: string;
 
-  @IsNotEmpty({ message: 'O link da trilha é obrigatório' })
+  @IsOptional()
   @IsUrl({}, { message: 'Link inválido. Use uma URL válida' })
-  link: string;
+  link?: string;
 }
