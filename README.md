@@ -6,17 +6,26 @@
 
 Este é um aplicativo mobile desenvolvido em React Native para gerenciamento de atividades/trilhas acadêmicas.
 Com ele, o aluno pode cadastrar, visualizar, pesquisar, editar e excluir trilhas de estudo, facilitando o acompanhamento de prazos e conteúdos.
+Este projeto é uma API construída com NestJS, utilizando TypeORM, PostgreSQL, JWT, Guards de autorização, Redis para cache, Pub/Sub para eventos e um sistema robusto de validação e consistência de dados.
+
+Ele foi projetado seguindo boas práticas de arquitetura, segurança e escalabilidade.
 
 ---
 
 ## 🛠️ Tecnologias Utilizadas
 
 - **React Native (Expo)**
-- **JavaScript**
-- **Node.js + Express** (backend)
-- **react-native-toast-message** (notificações personalizadas)
-- **react-native-mask-input** (máscara para datas)
-- **@expo/vector-icons** (ícones)
+- **NestJS — Framework Node.js modular**
+- **TypeORM — ORM para banco de dados relacional**
+- **PostgreSQL — Banco de dados principal**
+- **JWT + Passport — Autenticação**
+- **BCrypt — Hash de senhas**
+- **Redis**
+- **CacheService — Cache de usuários e atividades**
+- **PubSubService — Eventos distribuídos**
+- **Class-Validator / Class-Transformer**
+- **Guards e Decorators personalizados**
+- **Multer para o envio de imagens**
 
 ---
 
@@ -41,45 +50,6 @@ Com ele, o aluno pode cadastrar, visualizar, pesquisar, editar e excluir trilhas
 - Interface **simples e intuitiva**
 - Trilhas exibidas em **cards com ícones representativos**
 - Ícones de status visíveis no cabeçalho de cada card
+- Envio de imagens com multer
 
 ---
-
-## ⚙️ Como Rodar o Projeto
-
-### 🔹 Pré-requisitos
-
-- Node.js instalado
-- Expo CLI (`npm install -g expo-cli`)
-- Servidor backend configurado (API Node/Express)
-
-### 🔹 Passos
-
-# Clone o repositório
-
-git clone git@github.com:Brunosalles10/Projeto_Organizae.git
-
-# Acesse a pasta
-
-cd nome-do-repo
-
-# Instale as dependências
-
-npm install
-
-# Inicie o projeto
-
-npx expo start
-
-### 🔹 Rotas da API
-
-- POST /api/trilhas → Criar nova trilha
-
-- GET /api/trilhas → Listar todas as trilhas
-
-- PUT /api/trilhas/:id → Atualizar uma trilha
-
-- DELETE /api/trilhas/:id → Excluir uma trilha
-
-## 👨‍💻 Autores
-
-- Projeto desenvolvido por Bruno,Eloana e Ana – acadêmico de Análise e Desenvolvimento de Sistemas.
